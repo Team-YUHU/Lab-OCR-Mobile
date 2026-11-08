@@ -1,0 +1,62 @@
+{
+  "expo": {
+    "name": "MRG Labs OCR",
+    "slug": "mrg-labs-ocr",
+    "scheme": "mrglabsocr",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "backgroundColor": "#070707",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.mrglabs.ocr"
+    },
+    "android": {
+      "package": "com.mrglabs.ocr",
+      "adaptiveIcon": {
+        "backgroundColor": "#FFFFFF",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "permissions": ["android.permission.CAMERA"],
+      "blockedPermissions": ["android.permission.RECORD_AUDIO"],
+      "softwareKeyboardLayoutMode": "resize",
+      "predictiveBackGestureEnabled": false
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "MRG Labs OCR uses the camera to read sample labels.",
+          "recordAudioAndroid": false
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "MRG Labs OCR reads sample labels from your photos and videos."
+        }
+      ],
+      [
+        "expo-font",
+        {
+          "fonts": [
+            "./assets/fonts/minecraft-regular.otf",
+            "./assets/fonts/minecraft-bold.otf"
+          ]
+        }
+      ],
+      "expo-secure-store",
+      "expo-web-browser",
+      "expo-sharing",
+      "expo-image",
+      "expo-video",
+      "@clerk/expo"
+    ],
+    "experiments": {
+      "typedRoutes": false
+    }
+  }
+}
