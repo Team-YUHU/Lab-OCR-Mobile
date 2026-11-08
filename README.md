@@ -34,7 +34,8 @@ cd android && ./gradlew assembleRelease
 ```
 
 Or in GitHub Actions: `.github/workflows/android-apk.yml` builds the same APK and attaches
-it to the run as the `mrg-labs-ocr-apk` artifact. Set `EXPO_PUBLIC_API_URL` and
+it to the run as the `mrg-labs-ocr-apk` artifact. Builds of `main` are also published as a
+GitHub Release, so the latest APK is always at **Releases → Latest → mrg-labs-ocr.apk**. Set `EXPO_PUBLIC_API_URL` and
 `EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY` as repository *variables* to bake them in.
 
 The release APK is signed with the debug key, which is fine for installing directly on
