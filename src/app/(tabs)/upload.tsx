@@ -9,8 +9,8 @@ import { Button, Heading, Text } from '@/components/ui';
 import { ReviewSheet } from '@/components/review-form';
 import { useToast } from '@/components/toast';
 import { useApi, type ApiFetch } from '@/lib/api';
-import { UNCATEGORIZED_NAME, emptyFields, type Category, type Fields, type VialDetails } from '@/lib/labels';
-import { MAX_BYTES, readLabel, stillFor, uploadVialMedia, type LocalMedia, type UploadedMedia } from '@/lib/media';
+import { UNCATEGORIZED_NAME, emptyFields, type Alternatives, type Category, type Fields, type VialDetails } from '@/lib/labels';
+import { readLabel, stillFor, uploadVialMedia, type LocalMedia, type UploadedMedia } from '@/lib/media';
 import { pickMedia } from '@/lib/pick';
 import { deleteVial, saveVial } from '@/lib/vials';
 import { useTheme } from '@/lib/theme';
@@ -19,6 +19,8 @@ const MAX_FILES = 20;
 
 type LabelRead = {
 	fields: Fields;
+	/** Other values read from a video's frames, shown as hints while reviewing. */
+	alternatives: Alternatives;
 	labelType: string | null;
 	category: Category | null;
 	/** The saved row, once confirmed. Editing updates it rather than adding another. */
@@ -50,6 +52,7 @@ async function read(api: ApiFetch, media: LocalMedia): Promise<LabelRead> {
 	const result = await readLabel(api, media);
 	return {
 		fields: { ...emptyFields(), ...result.fields, dateReceived: '' },
+		alternatives: result.alternatives,
 		labelType: result.labelType,
 		category: null,
 		vialId: null,
@@ -224,15 +227,11 @@ export default function UploadScreen() {
 			toast.error((error as Error).message);
 			return;
 		}
-		const added: Item[] = picked.slice(0, room).map((media) => {
-			const tooBig = media.size != null && media.size > MAX_BYTES;
-			return {
-				id: String(nextId.current++),
-				media,
-				status: tooBig ? 'failed' : 'queued',
-				error: tooBig ? 'File must be 50 MB or smaller' : undefined,
-			};
-		});
+		const added: Item[] = picked.slice(0, room).map((media) => ({
+			id: String(nextId.current++),
+			media,
+			status: 'queued',
+		}));
 		setItems((current) => [...current, ...added]);
 	}
 
@@ -348,7 +347,7 @@ export default function UploadScreen() {
 				<View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 }}>
 					<ImagePlusIcon size={16} color={theme.colors.mutedForeground} />
 					<Text size={12} tone='muted'>
-						Up to {MAX_FILES} files, 50 MB each
+						Up to {MAX_FILES} files at a time
 					</Text>
 				</View>
 			</Pressable>
@@ -371,6 +370,7 @@ export default function UploadScreen() {
 					open
 					media={reviewing.media}
 					fields={reviewing.label.fields}
+					alternatives={reviewing.status === 'confirmed' ? {} : reviewing.label.alternatives}
 					category={reviewing.label.category}
 					details={reviewing.label.details}
 					onCancel={() => setReviewingId(null)}

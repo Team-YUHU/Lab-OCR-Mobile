@@ -22,7 +22,10 @@ export function useApi(): ApiFetch {
 				return await fetch(`${base}${path}`, { ...init, headers });
 			} catch (error) {
 				if ((error as Error).name === 'AbortError') throw error;
-				throw new Error('Could not reach the server. Please try again.');
+				const detail = (error as Error).message;
+				throw new Error(
+					`Could not reach the server. Check your connection and try again.${detail ? ` (${detail})` : ''}`,
+				);
 			}
 		},
 		[base, getToken],
@@ -33,6 +36,9 @@ export function useApi(): ApiFetch {
 export async function readJson<T = any>(response: Response): Promise<T> {
 	const data = await response.json().catch(() => ({}));
 	if (!response.ok) {
+		if (response.status === 413) {
+			throw new Error('That file is too large for the server to accept.');
+		}
 		if (response.status === 401) {
 			throw new Error('Your session has ended. Sign in again to continue.');
 		}

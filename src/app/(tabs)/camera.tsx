@@ -9,14 +9,14 @@ import { Button, ErrorText, Heading, Loading, Text } from '@/components/ui';
 import { ReviewSheet } from '@/components/review-form';
 import { useToast } from '@/components/toast';
 import { useApi } from '@/lib/api';
-import { UNCATEGORIZED_NAME, emptyFields, type Category, type Fields, type VialDetails } from '@/lib/labels';
+import { UNCATEGORIZED_NAME, emptyFields, type Alternatives, type Category, type Fields, type VialDetails } from '@/lib/labels';
 import { readLabel, stillFor, uploadVialMedia, type LocalMedia, type UploadedMedia } from '@/lib/media';
 import { saveVial } from '@/lib/vials';
 import { useTheme } from '@/lib/theme';
 
 type Phase = 'ready' | 'recording' | 'uploading' | 'done';
 type Mode = 'video' | 'photo';
-type OcrResult = { labelType: string | null; fields: Fields; scannedAt: string };
+type OcrResult = { labelType: string | null; fields: Fields; alternatives: Alternatives; scannedAt: string };
 type Saved = { vialId: string; category: Category | null };
 
 function formatElapsed(seconds: number) {
@@ -81,6 +81,7 @@ export default function CameraScreen() {
 			setResult({
 				labelType: read.labelType,
 				fields: { ...emptyFields(), ...read.fields },
+				alternatives: read.alternatives,
 				scannedAt: new Date().toISOString(),
 			});
 			setReviewing(true);
@@ -369,7 +370,8 @@ export default function CameraScreen() {
 					open={reviewing}
 					media={captured}
 					fields={result.fields}
-					category={null}
+					alternatives={saved ? {} : result.alternatives}
+					category={saved?.category ?? null}
 					onCancel={() => setReviewing(false)}
 					onConfirm={saveToInventory}
 				/>

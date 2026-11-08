@@ -3,7 +3,7 @@ import * as VideoThumbnails from 'expo-video-thumbnails';
 import * as Sharing from 'expo-sharing';
 import { File, Paths } from 'expo-file-system';
 import { readJson, type ApiFetch } from './api';
-import type { FrameResult } from './labels';
+import { mergeFrameResults, type FrameResult, type MergedResult } from './labels';
 
 /** A photo or video on this phone, from the camera or the photo library. */
 export type LocalMedia = {
@@ -16,26 +16,7 @@ export type LocalMedia = {
 	size?: number | null;
 };
 
-export const MAX_BYTES = 50 * 1024 * 1024; // the OCR route's limit
 const MAX_SIDE = 1600;
-
-const VIDEO_TYPES: Record<string, string> = {
-	mp4: 'video/mp4',
-	m4v: 'video/mp4',
-	mov: 'video/quicktime',
-	webm: 'video/webm',
-};
-
-function extension(name: string) {
-	return name.split('.').pop()?.toLowerCase() ?? '';
-}
-
-/** The type the OCR route accepts: it refuses anything with a codecs suffix. */
-export function videoType(media: LocalMedia) {
-	const plain = media.mimeType.split(';')[0].trim();
-	if (Object.values(VIDEO_TYPES).includes(plain)) return plain;
-	return VIDEO_TYPES[extension(media.name)] ?? 'video/mp4';
-}
 
 export function fileNameFrom(uri: string, fallback: string) {
 	const last = decodeURIComponent(uri.split('/').pop() ?? '').split('?')[0];
@@ -72,32 +53,62 @@ export async function stillFor(media: LocalMedia) {
 	}
 }
 
-/** Reads a label through the OCR route. Videos go up whole; the server picks the frames. */
+/** Sends one JPEG to the OCR route. Each is well under Vercel's 4.5 MB request limit. */
+async function readImage(api: ApiFetch, jpegUri: string, name: string, signal?: AbortSignal) {
+	const body = new FormData();
+	body.append('image', {
+		uri: jpegUri,
+		name: name.replace(/\.[^.]+$/, '') + '.jpg',
+		type: 'image/jpeg',
+	} as unknown as Blob);
+	const response = await api('/api/v1/ocr', { method: 'POST', body, signal });
+	return readJson<FrameResult>(response);
+}
+
+/** Where to take frames from a video: a quarter, half and three quarters of the way in. */
+function frameTimes(durationMs: number | null | undefined) {
+	if (!durationMs || durationMs < 600) return [0, 500, 1000];
+	return [0.25, 0.5, 0.75].map((share) => Math.round(durationMs * share));
+}
+
+async function videoFrame(uri: string, time: number) {
+	const { uri: frame } = await VideoThumbnails.getThumbnailAsync(uri, { time, quality: 1 });
+	return toJpeg(frame);
+}
+
+/**
+ * Reads a label. A video is never sent whole: phone video quickly passes Vercel's 4.5 MB
+ * limit, so three frames are read separately and combined, as the web app does for
+ * uploaded videos. Values the frames disagree on come back as alternatives.
+ */
 export async function readLabel(
 	api: ApiFetch,
 	media: LocalMedia,
 	signal?: AbortSignal,
-): Promise<FrameResult> {
-	if (media.size && media.size > MAX_BYTES) {
-		throw new Error('File must be 50 MB or smaller');
+): Promise<MergedResult> {
+	if (!media.isVideo) {
+		const result = await readImage(api, await toJpeg(media.uri), media.name, signal);
+		return { ...result, alternatives: {} };
 	}
-	const body = new FormData();
-	if (media.isVideo) {
-		body.append('video', {
-			uri: media.uri,
-			name: media.name,
-			type: videoType(media),
-		} as unknown as Blob);
-	} else {
-		const jpeg = await toJpeg(media.uri);
-		body.append('image', {
-			uri: jpeg,
-			name: media.name.replace(/\.[^.]+$/, '') + '.jpg',
-			type: 'image/jpeg',
-		} as unknown as Blob);
+
+	const frames: string[] = [];
+	for (const time of frameTimes(media.durationMs)) {
+		try {
+			frames.push(await videoFrame(media.uri, time));
+		} catch {
+			// A time past the end of a short clip: the other frames still count.
+		}
 	}
-	const response = await api('/api/v1/ocr', { method: 'POST', body, signal });
-	return readJson<FrameResult>(response);
+	if (frames.length === 0) throw new Error('Could not take frames from this video');
+
+	const settled = await Promise.allSettled(
+		frames.map((frame) => readImage(api, frame, media.name, signal)),
+	);
+	const results = settled.flatMap((outcome) => (outcome.status === 'fulfilled' ? [outcome.value] : []));
+	if (results.length === 0) {
+		throw (settled[0] as PromiseRejectedResult).reason;
+	}
+	return mergeFrameResults(results);
 }
 
 export type UploadedMedia = { publicId: string; resourceType: 'image'; url: string };
