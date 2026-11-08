@@ -1,21 +1,18 @@
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, View } from 'react-native';
+import { KeyboardAvoidingView, Modal, Platform, ScrollView, View } from 'react-native';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button, Card, ErrorText, Field, Heading, Input, Text } from '@/components/ui';
 import { isComplete, normalizeUrl, useServerConfig } from '@/lib/server-config';
 import { useTheme } from '@/lib/theme';
 
-/**
- * Where the web app is deployed, and its Clerk publishable key. Shown on first launch when
- * neither was built in, and from Settings to point the app somewhere else.
- */
+/** Where the web app is deployed, and its Clerk publishable key, to point the app elsewhere. */
 export function ServerSetup({ onDone }: { onDone?: () => void }) {
 	const { theme } = useTheme();
 	const insets = useSafeAreaInsets();
 	const { config, save, reset, builtIn } = useServerConfig();
-	const [apiUrl, setApiUrl] = useState(config?.apiUrl ?? '');
-	const [publishableKey, setPublishableKey] = useState(config?.publishableKey ?? '');
+	const [apiUrl, setApiUrl] = useState(config.apiUrl);
+	const [publishableKey, setPublishableKey] = useState(config.publishableKey);
 	const [checking, setChecking] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 
@@ -101,5 +98,14 @@ export function ServerSetup({ onDone }: { onDone?: () => void }) {
 				</Card>
 			</ScrollView>
 		</KeyboardAvoidingView>
+	);
+}
+
+/** The server settings as a full-screen pop-up, so opening them never changes route. */
+export function ServerSettingsModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+	return (
+		<Modal visible={open} animationType='slide' onRequestClose={onClose} statusBarTranslucent>
+			{open && <ServerSetup onDone={onClose} />}
+		</Modal>
 	);
 }

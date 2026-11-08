@@ -1,11 +1,12 @@
+import { useState } from 'react';
 import { Pressable, View } from 'react-native';
-import { router } from 'expo-router';
 import { Image } from 'expo-image';
 import { useAuth, useUser } from '@clerk/expo';
 import { CheckIcon, LogOutIcon, MonitorCogIcon, ServerIcon } from 'lucide-react-native';
 import { Screen } from '@/components/screen';
 import { Button, Card, Heading, Text } from '@/components/ui';
 import { useServerConfig } from '@/lib/server-config';
+import { ServerSettingsModal } from '@/screens/server-setup';
 import { THEME_OPTIONS, getTheme, useTheme, type ThemeId } from '@/lib/theme';
 
 function AccountCard() {
@@ -64,6 +65,7 @@ function Swatch({ id }: { id: ThemeId }) {
 export default function SettingsScreen() {
 	const { theme, setTheme } = useTheme();
 	const { config } = useServerConfig();
+	const [serverOpen, setServerOpen] = useState(false);
 
 	return (
 		<Screen>
@@ -148,10 +150,11 @@ export default function SettingsScreen() {
 							Server
 						</Text>
 						<Text size={13} tone='muted' numberOfLines={1}>
-							{config?.apiUrl}
+							{config.apiUrl}
 						</Text>
 					</View>
-					<Button title='Change' size='sm' variant='outline' onPress={() => router.push('/server')} />
+					<Button title='Change' size='sm' variant='outline' onPress={() => setServerOpen(true)} />
+					<ServerSettingsModal open={serverOpen} onClose={() => setServerOpen(false)} />
 				</View>
 			</Card>
 		</Screen>

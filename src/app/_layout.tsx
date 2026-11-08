@@ -1,15 +1,16 @@
-import { Component, useState, type ReactNode } from 'react';
+import { Component, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { ScrollView, View } from 'react-native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useFonts } from 'expo-font';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ThemeProvider as NavigationThemeProvider, DarkTheme, DefaultTheme } from '@react-navigation/native';
-import { ClerkProvider, useAuth } from '@clerk/expo';
+import { ClerkProvider, useAuth, useClerk } from '@clerk/expo';
 import { tokenCache } from '@clerk/expo/token-cache';
 import { ThemeProvider, useTheme } from '@/lib/theme';
 import { ServerConfigProvider, useServerConfig } from '@/lib/server-config';
 import { clearLastCrash, describeError, installCrashReporter, readLastCrash, saveCrash } from '@/lib/crash-report';
+import { prepareClerk, useClerkLoadError } from '@/lib/clerk-diagnostics';
 import { ToastProvider } from '@/components/toast';
 import { Button, Heading, Text } from '@/components/ui';
 
@@ -108,22 +109,35 @@ function LastCrashNotice({ children }: { children: ReactNode }) {
 
 function RootStack() {
 	const { isLoaded, isSignedIn } = useAuth();
+	const clerk = useClerk();
+	const loadError = useClerkLoadError();
 	const { theme } = useTheme();
+	const [, setTick] = useState(0);
+
+	const status = (clerk as unknown as { status?: string }).status;
+	// A Clerk that failed to start counts as not ready: the loading screen explains why.
+	const ready = isLoaded && !loadError && status !== 'error';
+
+	// Clerk's status doesn't always re-render us, so look again every second until ready.
+	useEffect(() => {
+		if (ready) return;
+		const ticker = setInterval(() => setTick((tick) => tick + 1), 1000);
+		return () => clearInterval(ticker);
+	}, [ready]);
 
 	// Always a navigator, as Expo Router expects; the guards pick which screens exist.
 	return (
 		<Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: theme.colors.background } }}>
-			<Stack.Protected guard={!isLoaded}>
+			<Stack.Protected guard={!ready}>
 				<Stack.Screen name='loading' />
 			</Stack.Protected>
-			<Stack.Protected guard={isLoaded && !!isSignedIn}>
+			<Stack.Protected guard={ready && !!isSignedIn}>
 				<Stack.Screen name='(tabs)' />
 			</Stack.Protected>
 			{/* Signed out, the sign-in screen is all anyone can see. Sign-up is closed. */}
-			<Stack.Protected guard={isLoaded && !isSignedIn}>
+			<Stack.Protected guard={ready && !isSignedIn}>
 				<Stack.Screen name='sign-in' />
 			</Stack.Protected>
-			<Stack.Screen name='server' options={{ presentation: 'modal' }} />
 		</Stack>
 	);
 }
@@ -131,6 +145,8 @@ function RootStack() {
 function App() {
 	const { config } = useServerConfig();
 	const { theme } = useTheme();
+	// Before ClerkProvider renders, so it picks up the same instance with errors recorded.
+	useMemo(() => prepareClerk(config.publishableKey), [config.publishableKey]);
 	const base = theme.dark ? DarkTheme : DefaultTheme;
 	const navigationTheme = {
 		...base,

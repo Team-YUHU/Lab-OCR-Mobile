@@ -1,11 +1,11 @@
 import { useState, type ReactNode } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from 'react-native';
 import { Image } from 'expo-image';
-import { Link } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSignIn } from '@clerk/expo';
 import { Button, Card, ErrorText, Field, Heading, Input, Text } from '@/components/ui';
 import { useTheme } from '@/lib/theme';
+import { ServerSettingsModal } from '@/screens/server-setup';
 
 // The same steps as the web app's sign-in form. Email and password only: accounts are
 // added in Clerk by an admin.
@@ -85,6 +85,7 @@ export default function SignInScreen() {
 	const [newPassword, setNewPassword] = useState('');
 	const [problem, setProblem] = useState<string | null>(null);
 	const [breached, setBreached] = useState(false);
+	const [serverOpen, setServerOpen] = useState(false);
 
 	const busy = fetchStatus === 'fetching';
 	const formError = problem ?? clerkMessage(errors?.global?.[0]);
@@ -249,13 +250,12 @@ export default function SignInScreen() {
 					<Text tone='muted' size={14} style={{ textAlign: 'center' }}>
 						No account yet? Ask your lab administrator to add you.
 					</Text>
-					<Link href='/server' asChild>
-						<Pressable hitSlop={8}>
-							<Text tone='muted' size={13} style={{ textDecorationLine: 'underline' }}>
-								Server settings
-							</Text>
-						</Pressable>
-					</Link>
+					<Pressable hitSlop={8} onPress={() => setServerOpen(true)}>
+						<Text tone='muted' size={13} style={{ textDecorationLine: 'underline' }}>
+							Server settings
+						</Text>
+					</Pressable>
+					<ServerSettingsModal open={serverOpen} onClose={() => setServerOpen(false)} />
 				</View>
 			}
 		>
