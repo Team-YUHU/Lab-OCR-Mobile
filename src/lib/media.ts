@@ -152,7 +152,7 @@ export async function shareCsv(fileName: string, csv: string) {
 	const file = new File(Paths.cache, fileName);
 	if (file.exists) file.delete();
 	file.create();
-	file.write(csv);
+	file.writeSync(csv);
 	if (!(await Sharing.isAvailableAsync())) {
 		throw new Error('Sharing is not available on this device');
 	}

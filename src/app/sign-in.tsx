@@ -87,7 +87,7 @@ export default function SignInScreen() {
 	const [breached, setBreached] = useState(false);
 
 	const busy = fetchStatus === 'fetching';
-	const formError = problem ?? clerkMessage(errors.global?.[0]);
+	const formError = problem ?? clerkMessage(errors?.global?.[0]);
 
 	/** Finishes the sign-in, or moves to whatever step Clerk still needs. */
 	async function continueSignIn() {
@@ -97,7 +97,7 @@ export default function SignInScreen() {
 			return;
 		}
 		if (signIn.status === 'needs_second_factor' || signIn.status === 'needs_client_trust') {
-			const canEmail = signIn.supportedSecondFactors.some((factor) => factor.strategy === 'email_code');
+			const canEmail = (signIn.supportedSecondFactors ?? []).some((factor) => factor.strategy === 'email_code');
 			if (!canEmail) {
 				setProblem('This account needs a verification method this app does not support.');
 				return;
@@ -167,7 +167,7 @@ export default function SignInScreen() {
 	const backButton = <Button title='Back to sign in' variant='ghost' onPress={() => void startOver()} />;
 
 	const codeField = (
-		<Field label='Code' error={errors.fields.code?.message}>
+		<Field label='Code' error={errors?.fields?.code?.message}>
 			<Input
 				value={code}
 				onChangeText={setCode}
@@ -217,7 +217,7 @@ export default function SignInScreen() {
 	if (step === 'reset-password') {
 		return (
 			<AuthCard title='Choose a new password'>
-				<Field label='New password' hint='At least 15 characters.' error={errors.fields.password?.message}>
+				<Field label='New password' hint='At least 15 characters.' error={errors?.fields?.password?.message}>
 					<Input
 						value={newPassword}
 						onChangeText={setNewPassword}
@@ -259,7 +259,7 @@ export default function SignInScreen() {
 				</View>
 			}
 		>
-			<Field label='Email' error={errors.fields.identifier?.message}>
+			<Field label='Email' error={errors?.fields?.identifier?.message}>
 				<Input
 					value={email}
 					onChangeText={setEmail}
@@ -270,7 +270,7 @@ export default function SignInScreen() {
 				/>
 			</Field>
 			<View style={{ gap: 6 }}>
-				<Field label='Password' error={breached ? null : errors.fields.password?.message}>
+				<Field label='Password' error={breached ? null : errors?.fields?.password?.message}>
 					<Input
 						value={password}
 						onChangeText={(text) => {

@@ -9,10 +9,12 @@ own: it calls the deployed web app's `/api/v1` routes with the user's Clerk sess
 
 1. **Clerk:** in the Clerk dashboard, go to **Configure → Native applications** and turn on
    the **Native API**. Without it, sign-in from the app is refused.
-2. **Server address and key:** either set `EXPO_PUBLIC_API_URL` and
-   `EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY` (see `.env.example`) before building, or leave them
-   out and enter them in the app on first launch. They can be changed later in
-   **Settings → Server**.
+2. **Server address and key:** built in (`src/lib/server-config.tsx`): the Vercel
+   deployment and its Clerk publishable key. `EXPO_PUBLIC_API_URL` and
+   `EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY` override them at build time, and
+   **Settings → Server** overrides them on one phone.
+
+If the app ever closes on an error, it shows the error message on the next launch.
 
 Nothing in the web app needs to change: Clerk's middleware accepts the app's
 `Authorization: Bearer` session token in place of the browser cookie.
@@ -34,8 +36,7 @@ cd android && ./gradlew assembleRelease
 ```
 
 Or in GitHub Actions: `.github/workflows/android-apk.yml` builds the same APK and attaches
-it to the run as the `mrg-labs-ocr-apk` artifact. Builds of `main` are also published as a
-GitHub Release, so the latest APK is always at **Releases → Latest → mrg-labs-ocr.apk**. Set `EXPO_PUBLIC_API_URL` and
+it to the run as the `mrg-labs-ocr-apk` artifact. Set `EXPO_PUBLIC_API_URL` and
 `EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY` as repository *variables* to bake them in.
 
 The release APK is signed with the debug key, which is fine for installing directly on

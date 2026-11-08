@@ -13,7 +13,7 @@ import { useTheme } from '@/lib/theme';
 export function ServerSetup({ onDone }: { onDone?: () => void }) {
 	const { theme } = useTheme();
 	const insets = useSafeAreaInsets();
-	const { config, save, builtIn } = useServerConfig();
+	const { config, save, reset, builtIn } = useServerConfig();
 	const [apiUrl, setApiUrl] = useState(config?.apiUrl ?? '');
 	const [publishableKey, setPublishableKey] = useState(config?.publishableKey ?? '');
 	const [checking, setChecking] = useState(false);
@@ -64,7 +64,7 @@ export function ServerSetup({ onDone }: { onDone?: () => void }) {
 					</Text>
 				</View>
 				<Card>
-					<Field label='Server address' hint='Where the website is deployed, e.g. https://ocr.mrglabs.com'>
+					<Field label='Server address' hint='Where the website is deployed. Only the address is used, not the page.'>
 						<Input
 							value={apiUrl}
 							onChangeText={setApiUrl}
@@ -88,6 +88,15 @@ export function ServerSetup({ onDone }: { onDone?: () => void }) {
 					</Field>
 					<ErrorText>{error}</ErrorText>
 					<Button title={checking ? 'Checking…' : 'Save and continue'} busy={checking} size='lg' onPress={() => void handleSave()} />
+					<Button
+						title='Use the built-in server'
+						variant='outline'
+						onPress={() => {
+							setApiUrl(builtIn.apiUrl);
+							setPublishableKey(builtIn.publishableKey);
+							void reset().then(() => onDone?.());
+						}}
+					/>
 					{onDone && <Button title='Cancel' variant='ghost' onPress={onDone} />}
 				</Card>
 			</ScrollView>
