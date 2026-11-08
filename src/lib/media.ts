@@ -18,6 +18,15 @@ export type LocalMedia = {
 
 const MAX_SIDE = 1600;
 
+/**
+ * A file for FormData. Expo's fetch (the app's global fetch) can't send React Native's
+ * { uri, name, type } parts: it needs a part it can read the bytes of.
+ */
+function filePart(uri: string, name: string, type: string) {
+	const file = new File(uri);
+	return { name, type, bytes: () => file.bytes() } as unknown as Blob;
+}
+
 export function fileNameFrom(uri: string, fallback: string) {
 	const last = decodeURIComponent(uri.split('/').pop() ?? '').split('?')[0];
 	return last && last.includes('.') ? last : fallback;
@@ -56,11 +65,7 @@ export async function stillFor(media: LocalMedia) {
 /** Sends one JPEG to the OCR route. Each is well under Vercel's 4.5 MB request limit. */
 async function readImage(api: ApiFetch, jpegUri: string, name: string, signal?: AbortSignal) {
 	const body = new FormData();
-	body.append('image', {
-		uri: jpegUri,
-		name: name.replace(/\.[^.]+$/, '') + '.jpg',
-		type: 'image/jpeg',
-	} as unknown as Blob);
+	body.append('image', filePart(jpegUri, name.replace(/\.[^.]+$/, '') + '.jpg', 'image/jpeg'));
 	const response = await api('/api/v1/ocr', { method: 'POST', body, signal });
 	return readJson<FrameResult>(response);
 }
@@ -127,11 +132,7 @@ export async function uploadVialMedia(api: ApiFetch, jpegUri: string, name: stri
 		await api('/api/v1/cloudinary/signature', { method: 'POST' }),
 	);
 	const body = new FormData();
-	body.append('file', {
-		uri: jpegUri,
-		name: name.replace(/\.[^.]+$/, '') + '.jpg',
-		type: 'image/jpeg',
-	} as unknown as Blob);
+	body.append('file', filePart(jpegUri, name.replace(/\.[^.]+$/, '') + '.jpg', 'image/jpeg'));
 	body.append('api_key', signature.apiKey);
 	body.append('timestamp', String(signature.timestamp));
 	body.append('folder', signature.folder);
